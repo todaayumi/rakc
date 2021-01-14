@@ -97,34 +97,40 @@ class rakumachi extends Command
             return;
         }
 
-        $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
-
-        //サイトからクロール
-        $html = file_get_contents($url);
         $names = array();
         $dimensions = array();
         $prices = array();
         $yields = array();
 
-        //クロール結果を配列に追加
+        //サイトからクロール　ページネーションを巡回
+        for($page_num = 1; $page_num < 50; $page_num++){
+            $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page='.$page_num.'&?pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
+            $html = file_get_contents($url);
+
+             //クロール結果を配列に追加
         $name_num = count(phpQuery::newDocument($html)->find(".propertyBlock__name"));
-for($i=0; $i < $name_num; $i++){
-    $dimensions[] = trim(phpQuery::newDocument($html)->find(".propertyBlock__dimension:eq($i)")->text());
-    $names[] = trim(phpQuery::newDocument($html)->find(".propertyBlock__name:eq($i)")->text());
-    $prices[] = trim(phpQuery::newDocument($html)->find(".price:eq($i)")->text());
-    $yields[] = trim(phpQuery::newDocument($html)->find(".gross:eq($i)")->text());
-
-}
-
-         //クロールして得たデータとファイルの行数が同じでなかった場合のみファイル書き換え
-         $fh = fopen($filename, "w");
-         $row = count(file($filename));
-        if($row !== $name_num){
-            foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-            }
+        for($i=0; $i < $name_num; $i++){
+            $dimensions[] = trim(phpQuery::newDocument($html)->find(".propertyBlock__dimension:eq($i)")->text());
+            $names[] = trim(phpQuery::newDocument($html)->find(".propertyBlock__name:eq($i)")->text());
+            $prices[] = trim(phpQuery::newDocument($html)->find(".price:eq($i)")->text());
+            $yields[] = trim(phpQuery::newDocument($html)->find(".gross:eq($i)")->text());
+        
         }
         
+                 //クロールして得たデータとファイルの行数が同じでなかった場合のみファイル書き換え
+                 $fh = fopen($filename, "w");
+                 $row = count(file($filename));
+                if($row !== $name_num){
+                    foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+                            fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+                    }
+                }
+                
+        }
+
+        
+
+       
 
         //ファイル書き込みが終わった段階のファイル行数を変数に保存
         $after = count( file ( $filename));
