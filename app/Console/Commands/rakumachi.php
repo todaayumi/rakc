@@ -18,7 +18,7 @@ class rakumachi extends Command
      *
      * @var string
      */
-    protected $signature = 'command:crawl';
+    protected $signature = 'command:crawl {--pref=}{--prop=}{--price=}{--yield=}';
 
     /**
      * The console command description.
@@ -49,8 +49,46 @@ class rakumachi extends Command
         $filename = "file.txt";
         $before = count( file ( $filename));
 
+        //オプションを受け取る
+        $pref = $this->option('pref');
+        $prop = $this->option('prop');
+        $price = $this->option('price');
+        $yield = $this->option('yield');
+
+        if($pref == "北海道"){
+            $pref_num = 1;
+        }elseif($pref == "青森"){
+            $pref_num = 2;
+        }else{
+            $pref_num = '';
+        }
+
+        if($prop == "1棟マンション"){
+            $prop_num = '&dim[]=1001';
+        }elseif($prop == "1棟アパート"){
+            $prop_num = '&dim[]=1002';
+        }else{
+            $prop_num = '';
+        }
+
+        if($price == 300){
+            $price_num = 300;
+        }elseif($price == 500){
+            $price_num = 500;
+        }else{
+            $price_num = '';
+        }
+
+        if(isset($yield)){
+            $yield_num = $yield;
+        }else{
+            $yield_num = '';
+        }
+
+        $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
+
         //サイトからクロール
-        $html = file_get_contents('https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?pref=&gross_from=&price_to=');
+        $html = file_get_contents($url);
         $names = array();
         $dimensions = array();
         $prices = array();
