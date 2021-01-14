@@ -59,30 +59,42 @@ class rakumachi extends Command
             $pref_num = 1;
         }elseif($pref == "青森"){
             $pref_num = 2;
-        }else{
+        }elseif($pref == ''){
             $pref_num = '';
+        }else{
+            echo '--prefオプションの入力に誤りがあります。';
+            return;
         }
 
         if($prop == "1棟マンション"){
             $prop_num = '&dim[]=1001';
         }elseif($prop == "1棟アパート"){
             $prop_num = '&dim[]=1002';
-        }else{
+        }elseif($prop == ''){
             $prop_num = '';
+        }else{
+            echo '--propオプションの入力に誤りがあります。';
+            return;
         }
 
         if($price == 300){
             $price_num = 300;
         }elseif($price == 500){
             $price_num = 500;
-        }else{
+        }elseif($price == ''){
             $price_num = '';
+        }else{
+            echo '--priceオプションの入力に誤りがあります。';
+            return;
         }
 
-        if(isset($yield)){
+        if($yield == 3 || 5 || 8 || 12){
             $yield_num = $yield;
-        }else{
+        }elseif($yield == ''){
             $yield_num = '';
+        }else{
+            echo '--yieldオプションの入力に誤りがあります。';
+            return;
         }
 
         $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
