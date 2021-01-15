@@ -9,6 +9,17 @@ require PHP_QUERY_LIB;
 use Illuminate\Console\Command;
 use \phpQuery;
 
+class Prefecture{
+
+    const HOKKAIDO = 1;
+    const AOMORI = 2;
+}
+
+class Types{
+
+    const oneCondominium = '&dim[]=1001';
+    const oneApartment = '&dim[]=1002';
+}
 
 
 class rakumachi extends Command
@@ -55,10 +66,11 @@ class rakumachi extends Command
         $price = $this->option('price');
         $yield = $this->option('yield');
 
+        //URLの値を当てはめる
         if($pref == "北海道"){
-            $pref_num = 1;
+            $pref_num = Prefecture::HOKKAIDO;
         }elseif($pref == "青森"){
-            $pref_num = 2;
+            $pref_num = Prefecture::AOMORI;
         }elseif($pref == ''){
             $pref_num = '';
         }else{
@@ -67,9 +79,9 @@ class rakumachi extends Command
         }
 
         if($prop == "1棟マンション"){
-            $prop_num = '&dim[]=1001';
+            $prop_num = Types::oneCondominium;
         }elseif($prop == "1棟アパート"){
-            $prop_num = '&dim[]=1002';
+            $prop_num = Types::oneApartment;
         }elseif($prop == ''){
             $prop_num = '';
         }else{
@@ -103,8 +115,8 @@ class rakumachi extends Command
         $yields = array();
 
         //サイトからクロール　ページネーションを巡回
-        for($page_num = 1; $page_num < 50; $page_num++){
-            $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page='.$page_num.'&?pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
+        for($page_num = 1; $page_num < 2; $page_num++){
+            $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page='.$page_num.'&pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
             $html = file_get_contents($url);
 
              //クロール結果を配列に追加
@@ -128,9 +140,6 @@ class rakumachi extends Command
                 
         }
 
-        
-
-       
 
         //ファイル書き込みが終わった段階のファイル行数を変数に保存
         $after = count( file ( $filename));
@@ -144,6 +153,8 @@ class rakumachi extends Command
             $message = '増加しました';
         }elseif($plus < 0){
             $message = '減少しました';
+        }else{
+            return;
         }
 
 
@@ -200,7 +211,8 @@ class rakumachi extends Command
         // 200 だったら OK
         echo $httpStatus . ' ' . $body;
         
-
+        
 
     }
+    
 }
