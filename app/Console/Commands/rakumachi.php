@@ -119,8 +119,15 @@ class rakumachi extends Command
         $prices = array();
         $yields = array();
 
+
+        //ファイル作成
+        $now = date("Y-m-d-H-i");
+        $file = 'C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/crawl_'.$now.'.txt';
+        $file_folder = glob('C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/*');
+        touch($file);
+
         //サイトからクロール　ページネーションを巡回
-        for($page_num = 1; $page_num < 2; $page_num++){
+        for($page_num = 1; $page_num <= 5; $page_num++){
             $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page='.$page_num.'&pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
             $html = file_get_contents($url);
 
@@ -133,11 +140,14 @@ class rakumachi extends Command
             $yields[] = trim(phpQuery::newDocument($html)->find(".gross:eq($i)")->text());
         
         }
-        
-                 //ファイル作成
-                 $now = date("Y-m-d-H-i");
-        $file = 'C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/crawl_'.$now.'.txt';
-        $file_folder = glob('C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/*');
+
+        $fh = fopen($file, "a");
+        foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+            fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+    }
+}
+
+                 
 
         //既に同じ条件でクロールされていたら増減を求める
         if(!empty($file_folder)){
@@ -145,46 +155,24 @@ class rakumachi extends Command
             $prev_line = count(file($prev_file));
 
             if($name_num > $prev_line){
-                touch($file);
-                $fh = fopen($file, "a");
-                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-            }
                 $plus = $name_num - $prev_line;
                 $message = '増加しました';
             }elseif($prev_line > $name_num){
-                touch($file);
-                $fh = fopen($file, "a");
-                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-            }
                 $plus = $prev_line - $name_num;
                 $message = '減少しました';
             }else{
                 //数に変わりなかったらファイルに書き込んで終わり
-                touch($file);
-                $fh = fopen($file, "a");
-                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-            }
                 return;
             }
         }else{
             //一つ目のファイルの場合
-            touch($file);
-            $fh = fopen($file, "a");
-                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-            }
             $plus = $name_num;
             $message = '増加しました';
         }
+        
+                
 
         fclose($fh);
-        
-
-                
-        }
 
         
 
