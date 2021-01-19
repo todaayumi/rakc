@@ -56,10 +56,6 @@ class rakumachi extends Command
     public function handle()
     {
 
-        //ファイルにクロールした分を保存する前に現時点のファイルの行数を変数に保存
-        $filename = "file.txt";
-        $before = count( file ( $filename));
-
         //オプションを受け取る
         $pref = $this->option('pref');
         $prop = $this->option('prop');
@@ -67,12 +63,19 @@ class rakumachi extends Command
         $yield = $this->option('yield');
 
         //URLの値を当てはめる
+        //クロール結果ファイルのフォルダ振り分けは試験的に北海道と青森のみ実施
         if($pref == "北海道"){
             $pref_num = Prefecture::HOKKAIDO;
+            $option_file = 'hokkaido';
+            $option = 'pref';
         }elseif($pref == "青森"){
             $pref_num = Prefecture::AOMORI;
+            $option_file = 'aomori';
+            $option = 'pref';
         }elseif($pref == ''){
             $pref_num = '';
+            $option ='none';
+            $option_file = 'all';
         }else{
             echo '--prefオプションの入力に誤りがあります。';
             return;
@@ -109,6 +112,8 @@ class rakumachi extends Command
             return;
         }
 
+        
+
         $names = array();
         $dimensions = array();
         $prices = array();
@@ -129,34 +134,59 @@ class rakumachi extends Command
         
         }
         
-                 //クロールして得たデータとファイルの行数が同じでなかった場合のみファイル書き換え
-                 $fh = fopen($filename, "w");
-                 $row = count(file($filename));
-                if($row !== $name_num){
-                    foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
-                            fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
-                    }
-                }
+                 //ファイル作成
+                 $now = date("Y-m-d-H-i");
+        $file = 'C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/crawl_'.$now.'.txt';
+        $file_folder = glob('C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/*');
+
+        //既に同じ条件でクロールされていたら増減を求める
+        if(!empty($file_folder)){
+            $prev_file = end($file_folder);
+            $prev_line = count(file($prev_file));
+
+            if($name_num > $prev_line){
+                touch($file);
+                $fh = fopen($file, "a");
+                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+            }
+                $plus = $name_num - $prev_line;
+                $message = '増加しました';
+            }elseif($prev_line > $name_num){
+                touch($file);
+                $fh = fopen($file, "a");
+                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+            }
+                $plus = $prev_line - $name_num;
+                $message = '減少しました';
+            }else{
+                //数に変わりなかったらファイルに書き込んで終わり
+                touch($file);
+                $fh = fopen($file, "a");
+                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+            }
+                return;
+            }
+        }else{
+            //一つ目のファイルの場合
+            touch($file);
+            $fh = fopen($file, "a");
+                foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
+                    fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
+            }
+            $plus = $name_num;
+            $message = '増加しました';
+        }
+
+        fclose($fh);
+        
+
                 
         }
 
-
-        //ファイル書き込みが終わった段階のファイル行数を変数に保存
-        $after = count( file ( $filename));
-        fclose($fh);
-
-        //クロール前後のファイルの行数を比較
-        $plus = $after - $before;
-        $minus = $after - $before;
-
-        if($plus > 0){
-            $message = '増加しました';
-        }elseif($plus < 0){
-            $message = '減少しました';
-        }else{
-            return;
-        }
-
+        
 
         //LINE通知
         $channelToken = 'tFrOOXIVQ68Y2h3//fqQuU8pVnwNpc4LKEkTtUKk6wl2SJPmVJfAV48Qlt2kXlsmDcf8MB9oHVrSw8UImq2yap9uX4UlhUcw3Toefi5GTuetOMkQaYR8BQVB2ZJOeWklP+uL0E8IpSb+Ff5AjXSu8QdB04t89/1O/w1cDnyilFU=';
@@ -214,5 +244,7 @@ class rakumachi extends Command
         
 
     }
-    
+
 }
+
+
