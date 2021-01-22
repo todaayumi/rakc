@@ -3,26 +3,14 @@
 
 namespace App\Console\Commands;
 
-define("PHP_QUERY_LIB", "phpQuery\phpQuery\phpQuery.php");
-require PHP_QUERY_LIB;
+require_once('phpQuery\phpQuery\phpQuery.php');
+require_once('const.php');
 
 use Illuminate\Console\Command;
 use \phpQuery;
 
-class Prefecture{
 
-    const HOKKAIDO = 1;
-    const AOMORI = 2;
-}
-
-class Types{
-
-    const oneCondominium = '&dim[]=1001';
-    const oneApartment = '&dim[]=1002';
-}
-
-
-class rakumachi extends Command
+class Rakumachi extends Command
 {
     /**
      * The name and signature of the console command.
@@ -48,6 +36,8 @@ class rakumachi extends Command
         parent::__construct();
     }
 
+    const RakumachiUrl = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page=';
+
     /**
      * Execute the console command.
      *
@@ -63,45 +53,29 @@ class rakumachi extends Command
         $yield = $this->option('yield');
 
         //URLの値を当てはめる
-        //クロール結果ファイルのフォルダ振り分けは試験的に北海道と青森のみ実施
-        if($pref == "北海道"){
-            $pref_num = Prefecture::HOKKAIDO;
-            $option_file = 'hokkaido';
-            $option = 'pref';
-        }elseif($pref == "青森"){
-            $pref_num = Prefecture::AOMORI;
-            $option_file = 'aomori';
-            $option = 'pref';
-        }elseif($pref == ''){
-            $pref_num = '';
-            $option ='none';
-            $option_file = 'all';
-        }else{
-            echo '--prefオプションの入力に誤りがあります。';
-            return;
-        }
+        //別ファイルの都道府県番号振り分け関数を実施
+        $pft = new Prefecture();
+        $pft->prefecture = $pref;
+        $pft->getPrefNum();
 
-        if($prop == "1棟マンション"){
-            $prop_num = Types::oneCondominium;
-        }elseif($prop == "1棟アパート"){
-            $prop_num = Types::oneApartment;
-        }elseif($prop == ''){
-            $prop_num = '';
-        }else{
-            echo '--propオプションの入力に誤りがあります。';
-            return;
-        }
+        //別ファイルの種別番号振り分けを実施
+        $proop = new Types();
+        $proop->props = $prop;
+        $proop->getPropNum();
 
-        if($price == 300){
-            $price_num = 300;
-        }elseif($price == 500){
-            $price_num = 500;
+        
+        //配列に当てはまるかどうかをチェック
+        $price_array = [300, 500, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+        $search = array_search($price, $price_array);
+        if(!is_bool($search)){
+            $price_num = $price_array[$search];
         }elseif($price == ''){
             $price_num = '';
         }else{
             echo '--priceオプションの入力に誤りがあります。';
             return;
         }
+        echo $price_num;
 
         if($yield == 3 || 5 || 8 || 12){
             $yield_num = $yield;
@@ -120,17 +94,23 @@ class rakumachi extends Command
         $yields = array();
 
 
+        
+        
         //ファイル作成
         $now = date("Y-m-d-H-i");
-        $file = 'C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/crawl_'.$now.'.txt';
-        $file_folder = glob('C:/xampp/htdocs/laravel/rakc/files/'.$option.'/'.$option_file.'/*');
+        $file = 'C:/xampp/htdocs/laravel/rakc/files/'.$pft->option.'/'.$pft->option_file.'/crawl_'.$now.'.txt';
+        $file_folder = glob('C:/xampp/htdocs/laravel/rakc/files/'.$pft->option.'/'.$pft->option_file.'/*');
         touch($file);
 
-        //サイトからクロール　ページネーションを巡回
-        for($page_num = 1; $page_num <= 5; $page_num++){
-            $url = 'https://www.rakumachi.jp/syuuekibukken/area/prefecture/dimAll/?page='.$page_num.'&pref='.$pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$prop_num;
-            $html = file_get_contents($url);
+       
 
+
+        //サイトからクロール　ページネーションを巡回
+        for($page_num = 1; $page_num <= 200; $page_num++){
+
+            $url = self::RakumachiUrl.$page_num.'&pref='.$pft->pref_num.'&gross_from='.$yield_num.'&price_to='.$price_num.$proop->prop_num;
+            $html = file_get_contents($url);
+            
              //クロール結果を配列に追加
         $name_num = count(phpQuery::newDocument($html)->find(".propertyBlock__name"));
         for($i=0; $i < $name_num; $i++){
@@ -141,12 +121,22 @@ class rakumachi extends Command
         
         }
 
+
         $fh = fopen($file, "a");
         foreach(array_map(null, $dimensions, $names, $prices, $yields) as [$dimension, $name, $price, $yield]){
             fwrite($fh, $dimension.",".$name.",".$price.",".$yield."\n");
     }
+
+    $page = phpQuery::newDocument($html)->find(".pagination .next")->text();
+        if($page == ''){
+            break;
+        }
+    
 }
 
+
+
+fclose($fh);
                  
 
         //既に同じ条件でクロールされていたら増減を求める
@@ -171,11 +161,7 @@ class rakumachi extends Command
         }
         
                 
-
-        fclose($fh);
-
         
-
         //LINE通知
         $channelToken = 'tFrOOXIVQ68Y2h3//fqQuU8pVnwNpc4LKEkTtUKk6wl2SJPmVJfAV48Qlt2kXlsmDcf8MB9oHVrSw8UImq2yap9uX4UlhUcw3Toefi5GTuetOMkQaYR8BQVB2ZJOeWklP+uL0E8IpSb+Ff5AjXSu8QdB04t89/1O/w1cDnyilFU=';
         $headers = [
@@ -228,9 +214,9 @@ class rakumachi extends Command
         
         // 200 だったら OK
         echo $httpStatus . ' ' . $body;
-        
-        
+       
 
+        
     }
 
 }
